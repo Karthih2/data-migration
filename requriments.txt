@@ -1,0 +1,5 @@
+python-dotenv==1.0.1
+pymysql==1.1.1
+pandas==2.1.1
+matplotlib==3.8.0
+pymongo==4.7.1
