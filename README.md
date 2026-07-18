@@ -1,59 +1,43 @@
-# Relational to NoSQL Migration: ETL, Denormalization, and Query-Driven Design
+<img src="https://img.shields.io/badge/MySQL%20to%20MongoDB-ETL%20%26%20Denormalization%20Migration-4DB33D?style=for-the-badge&logo=mongodb" width="100%">
+<h1 align="center">🔄 Relational to NoSQL Migration</h1>
+<p align="center"><b>ETL • Denormalization • Query-Driven Design</b></p>
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white">
+  <img src="https://img.shields.io/badge/MySQL-Relational-blue?logo=mysql&logoColor=white">
+  <img src="https://img.shields.io/badge/MongoDB-Document--Oriented-green?logo=mongodb&logoColor=white">
+  <img src="https://img.shields.io/badge/ETL-Data%20Migration-orange">
+  <img src="https://img.shields.io/badge/Data%20Modeling-Schema%20Design-critical">
+  <img src="https://img.shields.io/badge/Project-Complete-success">
+</p>
+<p align="center">A complete migration workflow demonstrating how a normalized relational movie database (MySQL) is transformed into a denormalized document database (MongoDB) — covering data modeling, ETL, and performance optimization on a MovieLens-style dataset.</p>
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-Relational-blue?logo=mysql&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-Document--Oriented-green?logo=mongodb&logoColor=white)
-![ETL](https://img.shields.io/badge/ETL-Data%20Migration-orange)
-![Data Modeling](https://img.shields.io/badge/Data%20Modeling-Schema%20Design-critical)
-![Status](https://img.shields.io/badge/Project-Complete-success)
-
-A comprehensive data migration project demonstrating the transformation of a relational movie database from MySQL to MongoDB's document-oriented structure, including data modeling, ETL processes, and performance optimization.
+---
 
 ## 📋 Project Overview
 
-This project showcases a complete migration workflow from a normalized relational database (MySQL) to a denormalized NoSQL database (MongoDB). The migration transforms a MovieLens-style dataset while demonstrating key concepts in both database paradigms.
+**Key Features:**
+- **Complete ETL Pipeline** — extract from MySQL, transform to document model, load into MongoDB
+- **Data Denormalization** — embedded documents and arrays for optimized query performance
+- **Schema Design** — document structure balancing read/write patterns
+- **Index Optimization** — strategic indexing for common query patterns
+- **Data Validation** — migration verification with count comparisons and integrity checks
 
-### Key Features
-
-- **Complete ETL Pipeline**: Extract data from MySQL, transform to document model, load into MongoDB
-- **Data Denormalization**: Embedded documents and arrays for optimized query performance
-- **Schema Design**: Thoughtful document structure balancing read/write patterns
-- **Index Optimization**: Strategic indexing for common query patterns
-- **Data Validation**: Migration verification with count comparisons and data integrity checks
+---
 
 ## 🗄️ Database Schemas
 
-### MySQL Schema (Source)
+### MySQL Schema (Source) — 4 normalized tables
 
-The relational database consists of four normalized tables:
+| Table | Columns |
+|---|---|
+| `movies` | `movieId` (PK), `title`, `genres` |
+| `links` | `movieId` (FK), `imdbId`, `tmdbId` |
+| `ratings` | `userId`, `movieId` (FK), `rating`, `rating_time` |
+| `movie_tags` | `userId`, `movieId` (FK), `tag`, `tag_time` |
 
-**movies**
-- `movieId` (INT, PK)
-- `title` (VARCHAR)
-- `genres` (VARCHAR)
+### MongoDB Schema (Target) — 3 collections with embedded documents
 
-**links**
-- `movieId` (INT, FK)
-- `imdbId` (VARCHAR)
-- `tmdbId` (INT)
-
-**ratings**
-- `userId` (INT)
-- `movieId` (INT, FK)
-- `rating` (DOUBLE)
-- `rating_time` (DATETIME)
-
-**movie_tags**
-- `userId` (INT)
-- `movieId` (INT, FK)
-- `tag` (VARCHAR)
-- `tag_time` (DATETIME)
-
-### MongoDB Schema (Target)
-
-The document-oriented database uses three collections with embedded documents:
-
-**movies**
+**`movies`**
 ```json
 {
   "_id": ObjectId,
@@ -61,10 +45,7 @@ The document-oriented database uses three collections with embedded documents:
   "title": "Toy Story",
   "genres": ["Adventure", "Animation", "Children", "Comedy", "Fantasy"],
   "release_year": "1995",
-  "links": {
-    "imdbId": "0114709",
-    "tmdbId": 862
-  },
+  "links": { "imdbId": "0114709", "tmdbId": 862 },
   "averageRating": 3.92,
   "ratingCount": 215,
   "tags": [
@@ -74,7 +55,7 @@ The document-oriented database uses three collections with embedded documents:
 }
 ```
 
-**ratings**
+**`ratings`**
 ```json
 {
   "_id": ObjectId,
@@ -85,7 +66,7 @@ The document-oriented database uses three collections with embedded documents:
 }
 ```
 
-**users**
+**`users`**
 ```json
 {
   "_id": ObjectId,
@@ -104,42 +85,38 @@ The document-oriented database uses three collections with embedded documents:
 }
 ```
 
+---
+
 ## 🔄 Migration Process
 
-### 1. Data Extraction
-
-Connect to MySQL and extract data from all four tables:
+### 1️⃣ Data Extraction
+Connect to MySQL and pull from all four tables:
 ```python
 conn = pymysql.connect(host=host, user=user, password=password, database=database)
 movies_df = pd.read_sql("SELECT m.*, l.imdbId, l.tmdbId FROM movies m LEFT JOIN links l ON m.movieId = l.movieId", conn)
 ```
 
-### 2. Data Transformation
-
-**Movie Documents**
-- Extract release year from title using regex
+### 2️⃣ Data Transformation
+**Movie documents:**
+- Extract release year from title via regex
 - Split pipe-delimited genres into arrays
-- Embed link information as nested objects
+- Embed link info as nested objects
 - Calculate and embed rating statistics
 - Aggregate and embed tag information
 
-**User Documents**
+**User documents:**
 - Aggregate all ratings and tags per user
-- Calculate user statistics (total ratings, average rating, total tags)
+- Calculate stats (total ratings, average rating, total tags)
 - Maintain recent activity (top 10 ratings and tags by timestamp)
 
-### 3. Data Loading
-
-Bulk insert transformed documents into MongoDB:
+### 3️⃣ Data Loading
 ```python
 db.movies.insert_many(movies_df.to_dict('records'))
 db.ratings.insert_many(ratings_df.to_dict('records'))
 db.users.insert_many(users_list)
 ```
 
-### 4. Index Creation
-
-Strategic indexes for query optimization:
+### 4️⃣ Index Creation
 ```python
 # Movies collection
 db.movies.create_index('movieId', unique=True)
@@ -154,52 +131,66 @@ db.ratings.create_index('movieId')
 db.users.create_index('userId', unique=True)
 ```
 
+---
+
 ## 📊 Migration Results
 
 | Entity | MySQL Count | MongoDB Count | Status |
-|--------|-------------|---------------|--------|
+|---|---|---|---|
 | Movies | 9,742 | 9,742 | ✅ Complete |
 | Ratings | 100,836 | 100,836 | ✅ Complete |
 | Users | 610 | 610 | ✅ Complete |
 
+---
+
 ## 🛠️ Technologies Used
 
-- **Python 3.x**: Core programming language
-- **PyMySQL**: MySQL database connector
-- **PyMongo**: MongoDB driver for Python
-- **Pandas**: Data manipulation and transformation
-- **Matplotlib**: Data visualization
-- **python-dotenv**: Environment variable management
+<p align="left">
+  <img src="https://img.shields.io/badge/Python%203.x-Core%20Language-3776AB?style=flat-square&logo=python&logoColor=white">
+  <img src="https://img.shields.io/badge/PyMySQL-MySQL%20Connector-4479A1?style=flat-square&logo=mysql&logoColor=white">
+  <img src="https://img.shields.io/badge/PyMongo-MongoDB%20Driver-47A248?style=flat-square&logo=mongodb&logoColor=white">
+  <img src="https://img.shields.io/badge/Pandas-Data%20Transformation-150458?style=flat-square&logo=pandas&logoColor=white">
+  <img src="https://img.shields.io/badge/Matplotlib-Visualization-11557C?style=flat-square&logo=plotly&logoColor=white">
+  <img src="https://img.shields.io/badge/python--dotenv-Env%20Config-ECD53F?style=flat-square&logo=python&logoColor=black">
+</p>
+
+---
 
 ## 📁 Project Structure
 
 ```
 ├── migration_script.ipynb              # Main migration script
-├── .env                              # Environment variables (not tracked)
-├── requirements.txt                  # Python dependencies
+├── .env                                # Environment variables (not tracked)
+├── requirements.txt                    # Python dependencies
 │
-├── data_models/                      # Database schemas & datasets
-│   ├── MongoDB_MoviesDB_DataModel   # MongoDB data model
-|   ├── MySql_MovieDB_DataModel      # MySQL data model
-│   │
-│   ├── datasets/                     # Dataset references
-│   │   ├── movies.csv                # Movies dataset
-│   │   ├── ratings.csv               # Ratings dataset
-│   │   ├── tags.csv                  # Tags dataset
-│   │   └── links.csv                 # Links dataset
+├── data_models/                        # Database schemas & datasets
+│   ├── MongoDB_MoviesDB_DataModel      # MongoDB data model
+│   └── MySql_MovieDB_DataModel         # MySQL data model
+│ 
+├── datasets/
+|    ├── README.txt                     # Dataset references
+│    ├── movies.csv
+│    ├── ratings.csv
+│    ├── tags.csv
+│    └── links.csv
+├── SQL Codes/                          # SQL Codes
+│    ├── links_sql.sql
+│    ├── movies_sql.sql
+│    └── tags_sql.sql
 │
-├── visualizations/                   # Migration result charts
+├── visualizations/                     # Migration result charts
 │   ├── movies_migration.png
 │   ├── ratings_migration.png
 │   └── users_migration.png
 │
-└── README.md                          # Project documentation
+└── README.md                           # Project documentation
 ```
+
+---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-
 - Python 3.7+
 - MySQL Server
 - MongoDB Server
@@ -207,18 +198,18 @@ db.users.create_index('userId', unique=True)
 
 ### Installation
 
-1. Clone the repository:
+**1. Clone the repository**
 ```bash
 git clone https://github.com/yourusername/mysql-mongodb-migration.git
 cd mysql-mongodb-migration
 ```
 
-2. Install dependencies:
+**2. Install dependencies**
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Configure environment variables in `.env`:
+**3. Configure environment variables** in `.env`
 ```env
 # MySQL Configuration
 host=localhost
@@ -230,35 +221,32 @@ database=moviesdb
 MONGO_URI=mongodb://localhost:27017/
 ```
 
-4. Run the migration:
+**4. Run the migration**
 ```bash
 python migration_script.py
 ```
 
+---
+
 ## 📈 Key Learnings
 
 ### Database Design Decisions
-
-1. **Embedding vs. Referencing**: Embedded link information and tags in movies collection for read optimization, while keeping ratings separate due to high volume and update frequency.
-
-2. **Denormalization Trade-offs**: Pre-calculated aggregates (averageRating, ratingCount) reduce query complexity at the cost of update complexity.
-
-3. **Index Strategy**: Compound indexes on (userId, rating_time) support user activity queries, while text index on title enables search functionality.
-
-4. **Array Fields**: Genres stored as arrays enable multi-value queries using MongoDB's array operators.
+1. **Embedding vs. Referencing** — link info and tags embedded in `movies` for read optimization; ratings kept separate due to high volume and update frequency
+2. **Denormalization Trade-offs** — pre-calculated aggregates (`averageRating`, `ratingCount`) reduce query complexity at the cost of update complexity
+3. **Index Strategy** — compound index on `(userId, rating_time)` supports user activity queries; text index on `title` enables search
+4. **Array Fields** — genres stored as arrays enable multi-value queries via MongoDB's array operators
 
 ### Performance Considerations
+- **Read Optimization** — embedded documents eliminate JOINs for common queries
+- **Write Trade-offs** — updates to ratings require updating movie aggregates
+- **Index Overhead** — strategic indexing balances query performance with storage cost
+- **Document Size** — kept under MongoDB's 16MB limit via recent-activity limits
 
-- **Read Optimization**: Embedded documents eliminate JOIN operations for common queries
-- **Write Trade-offs**: Updates to ratings require updating movie aggregates
-- **Index Overhead**: Strategic indexing balances query performance with storage cost
-- **Document Size**: Maintained under MongoDB's 16MB limit through recent activity limits
+---
 
 ## 🔍 Sample Queries
 
-### MongoDB Queries
-
-Find all Action movies with high ratings:
+**Find all Action movies with high ratings:**
 ```javascript
 db.movies.find({
   genres: "Action",
@@ -266,7 +254,7 @@ db.movies.find({
 })
 ```
 
-Get user's recent activity:
+**Get a user's recent activity:**
 ```javascript
 db.users.findOne(
   { userId: 1 },
@@ -274,12 +262,14 @@ db.users.findOne(
 )
 ```
 
-Text search for movies:
+**Text search for movies:**
 ```javascript
 db.movies.find({
   $text: { $search: "toy story" }
 })
 ```
+
+---
 
 ## 📝 Future Enhancements
 
@@ -290,23 +280,24 @@ db.movies.find({
 - [ ] Add unit tests for transformation logic
 - [ ] Performance benchmarking between MySQL and MongoDB queries
 
+---
+
 ## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome!.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+Contributions, issues, and feature requests are welcome!
 
 ## 👤 Author
-
 **Karthick S**
 
 ## 🙏 Acknowledgments
-
 - MovieLens dataset for sample data structure
 - MongoDB documentation for best practices
 
 ---
 
-*This project demonstrates practical experience with database migration, ETL processes, and understanding of both relational and document-oriented database paradigms.*
+<div align="center">
+
+✨ <i>This project demonstrates practical experience with database migration, ETL processes, and both relational and document-oriented database paradigms.</i> ✨
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=120&section=footer&animation=twinkling" width="100%"/>
+
+</div>
